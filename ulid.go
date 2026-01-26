@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/bits"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 )
@@ -498,13 +499,26 @@ func (id ULID) Compare(other ULID) int {
 
 // Scan implements the sql.Scanner interface. It supports scanning
 // a string or byte slice.
+// Updated to handle postgress UUID format by removing hyphens if present.
 func (id *ULID) Scan(src interface{}) error {
 	switch x := src.(type) {
 	case nil:
 		return nil
 	case string:
+		// Handle hyphenated UUID string (36 chars) vs raw ULID string (26 chars)
+		if len(x) == 36 {
+			x = strings.ReplaceAll(x, "-", "")
+		}
 		return id.UnmarshalText([]byte(x))
 	case []byte:
+		// Some drivers return the UUID as a 16-byte slice already
+		if len(x) == 16 {
+			return id.UnmarshalBinary(x)
+		}
+		// If it's a byte slice of the string representation
+		if len(x) == 36 {
+			return id.UnmarshalText([]byte(strings.ReplaceAll(string(x), "-", "")))
+		}
 		return id.UnmarshalBinary(x)
 	}
 
@@ -542,8 +556,10 @@ func (id *ULID) Scan(src interface{}) error {
 //
 //	// Example usage.
 //	db.Exec("...", invalidZeroValuer(id))
+//
+// Value sends the ULID to the DB as a 16-byte slice for the UUID column
 func (id ULID) Value() (driver.Value, error) {
-	return id.MarshalBinary()
+	return id[:], nil
 }
 
 // Monotonic returns a source of entropy that yields strictly increasing entropy
