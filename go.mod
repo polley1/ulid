@@ -1,4 +1,4 @@
-module github.com/polley1/ulid
+module github.com/polley1/ulid/v2
 
 go 1.15
 
