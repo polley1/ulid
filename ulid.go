@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"io"
 	"math"
@@ -501,13 +502,23 @@ func (id ULID) Compare(other ULID) int {
 // a string or byte slice.
 // Updated to handle postgress UUID format by removing hyphens if present.
 func (id *ULID) Scan(src interface{}) error {
-	switch x := src.(type) {
-	case nil:
+	if src == nil {
 		return nil
+	}
+
+	switch x := src.(type) {
 	case string:
 		// Handle hyphenated UUID string (36 chars) vs raw ULID string (26 chars)
 		if len(x) == 36 {
 			x = strings.ReplaceAll(x, "-", "")
+		}
+		// If it looks like a hex UUID (32 chars), decode it
+		if len(x) == 32 {
+			b, err := hex.DecodeString(x)
+			if err != nil {
+				return err
+			}
+			return id.UnmarshalBinary(b)
 		}
 		return id.UnmarshalText([]byte(x))
 	case []byte:
@@ -517,7 +528,14 @@ func (id *ULID) Scan(src interface{}) error {
 		}
 		// If it's a byte slice of the string representation
 		if len(x) == 36 {
-			return id.UnmarshalText([]byte(strings.ReplaceAll(string(x), "-", "")))
+			s := strings.ReplaceAll(string(x), "-", "")
+			if len(s) == 32 {
+				b, err := hex.DecodeString(s)
+				if err != nil {
+					return err
+				}
+				return id.UnmarshalBinary(b)
+			}
 		}
 		return id.UnmarshalBinary(x)
 	}
