@@ -2,4 +2,8 @@ module github.com/polley1/ulid/v2
 
 go 1.15
 
-require github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30
+require (
+	github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30
+	gorm.io/driver/postgres v1.6.0 // indirect
+	gorm.io/gorm v1.31.1 // indirect
+)
