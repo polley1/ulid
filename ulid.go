@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/bits"
@@ -27,6 +28,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 /*
@@ -541,6 +545,131 @@ func (id *ULID) Scan(src interface{}) error {
 	}
 
 	return ErrScanValue
+}
+
+// NullableULID represents a ULID that may be null.
+// It implements the database/sql.Scanner and driver.Valuer interfaces.
+type NullableULID struct {
+	ULID  ULID
+	Valid bool
+}
+
+// Scan implements the sql.Scanner interface.
+func (nu *NullableULID) Scan(value interface{}) error {
+	if value == nil {
+		nu.ULID = ULID{}
+		nu.Valid = false
+		return nil
+	}
+
+	switch v := value.(type) {
+	case string:
+		// Support string for backwards compatibility
+		parsed, err := Parse(v)
+		if err != nil {
+			return fmt.Errorf("failed to parse ULID from string: %w", err)
+		}
+		nu.ULID = parsed
+		nu.Valid = true
+		return nil
+	case []byte:
+		// Handle binary format (16 bytes)
+		if len(v) == 16 {
+			if err := nu.ULID.UnmarshalBinary(v); err != nil {
+				return fmt.Errorf("failed to unmarshal ULID from binary: %w", err)
+			}
+			nu.Valid = true
+			return nil
+		}
+		// Try parsing as string representation
+		parsed, err := Parse(string(v))
+		if err != nil {
+			return fmt.Errorf("failed to parse ULID from bytes: %w", err)
+		}
+		nu.ULID = parsed
+		nu.Valid = true
+		return nil
+	default:
+		return fmt.Errorf("cannot scan type %T into NullableULID", value)
+	}
+}
+
+// Value implements the driver.Valuer interface.
+func (nu NullableULID) Value() (driver.Value, error) {
+	if !nu.Valid {
+		return nil, nil
+	}
+	return nu.ULID.String(), nil
+}
+
+// GormDataType implements schema.GormDataTypeInterface.
+func (NullableULID) GormDataType() string {
+	return "uuid"
+}
+
+// GormDBDataType implements schema.GormDataTypeInterface.
+func (NullableULID) GormDBDataType(db *gorm.DB, field *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "mysql":
+		return "VARBINARY(16)"
+	case "postgres":
+		return "uuid"
+	case "sqlite":
+		return "BLOB"
+	default:
+		return "uuid"
+	}
+}
+
+// ScanULID scans the given value into a ULID.
+// It handles nil, string (both parsed and raw), and []byte.
+func ScanULID(value interface{}) (ULID, error) {
+	if value == nil {
+		return ULID{}, nil
+	}
+
+	switch v := value.(type) {
+	case string:
+		return Parse(v)
+	case []byte:
+		// Handle binary format (16 bytes)
+		if len(v) == 16 {
+			var u ULID
+			if err := u.UnmarshalBinary(v); err != nil {
+				return ULID{}, fmt.Errorf("failed to unmarshal ULID from binary: %w", err)
+			}
+			return u, nil
+		}
+		// Try parsing as string representation
+		return Parse(string(v))
+	default:
+		return ULID{}, fmt.Errorf("cannot scan type %T into ULID", value)
+	}
+}
+
+// ValueULID converts a ULID to a driver.Value.
+func ValueULID(u ULID) (driver.Value, error) {
+	if u == (ULID{}) {
+		return nil, nil
+	}
+	// Return binary representation (16 bytes)
+	bytes, err := u.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal ULID: %w", err)
+	}
+	return bytes, nil
+}
+
+// ULIDPlaceholders converts a slice of ULIDs into a slice of interface{} and returns a
+// comma-separated string of placeholders suitable for SQL queries.
+func ULIDPlaceholders(id_list []ULID) ([]interface{}, string) {
+	args := make([]interface{}, len(id_list))
+	placeholders := make([]string, len(id_list))
+	for i := range id_list {
+		placeholders[i] = "?"
+		args[i] = id_list[i]
+	}
+	return args, fmt.Sprintf("%s", strings.Join(placeholders, ","))
 }
 
 // Value implements the sql/driver.Valuer interface, returning the ULID as a
