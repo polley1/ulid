@@ -100,6 +100,38 @@ which means they are by default un-ordered. You can use
 to create ULIDs that are monotonic within a given millisecond, with caveats. See
 the documentation for details.
 
+## SQL & Database Support
+
+This package includes features to integrate seamlessly with SQL databases, including specific support for PostgreSQL and CockroachDB.
+
+### Nullable ULID
+
+`ulid.NullableULID` is a wrapper around `ulid.ULID` that implements `database/sql.Scanner` and `database/sql/driver.Valuer`. It supports nullable database columns.
+
+```go
+var u ulid.NullableULID
+// Scan handles nil, string, and []byte
+err := u.Scan(nil) // Valid: false
+```
+
+### PostgreSQL & CockroachDB
+
+The `ulid.ULID` type supports scanning from PostgreSQL/CockroachDB UUID columns. It automatically handles:
+- Standard 16-byte UUID binaries.
+- 36-character hyphenated UUID strings (e.g., `00000000-0000-0000-0000-000000000000`).
+- 32-character hex strings.
+
+When using GORM, `ulid.NullableULID` automatically maps to the correct data type:
+- **PostgreSQL**: `uuid`
+- **MySQL**: `VARBINARY(16)`
+- **SQLite**: `BLOB`
+
+### Helpers
+
+- `ScanULID(interface{}) (ULID, error)`: Helper to scan a value into a ULID.
+- `ValueULID(ULID) (driver.Value, error)`: Helper to get the driver value (bytes) for a ULID.
+- `ULIDPlaceholders([]ULID) ([]interface{}, string)`: Generates query placeholders for a slice of ULIDs.
+
 If you don't care about time-based ordering of generated IDs, then there's no
 reason to use ULIDs! There are many other kinds of IDs that are easier, faster,
 smaller, etc. Consider UUIDs.
