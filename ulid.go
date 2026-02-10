@@ -84,6 +84,9 @@ var (
 
 	// Zero is a zero-value ULID.
 	Zero ULID
+
+	// Indicate database type for when generating placeholders for IN queries. This is used in the ULIDPlaceholders function.
+	db_type = "mysql"
 )
 
 // MonotonicReader is an interface that should yield monotonically increasing
@@ -660,13 +663,24 @@ func ValueULID(u ULID) (driver.Value, error) {
 	return bytes, nil
 }
 
+// Setter for the db_type variable to allow users to specify their database type for placeholder generation.
+func SetDBType(dbType string) {
+	db_type = dbType
+}
+
 // ULIDPlaceholders converts a slice of ULIDs into a slice of interface{} and returns a
 // comma-separated string of placeholders suitable for SQL queries.
+// The placeholders are generated based on the db_type global variable (set via SetDBType).
 func ULIDPlaceholders(id_list []ULID) ([]interface{}, string) {
 	args := make([]interface{}, len(id_list))
 	placeholders := make([]string, len(id_list))
 	for i := range id_list {
-		placeholders[i] = "?"
+		switch db_type {
+		case "postgres":
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+		default:
+			placeholders[i] = "?"
+		}
 		args[i] = id_list[i]
 	}
 	return args, fmt.Sprintf("%s", strings.Join(placeholders, ","))

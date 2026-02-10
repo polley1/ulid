@@ -268,20 +268,30 @@ func TestULIDPlaceholders(t *testing.T) {
 		ulid.MustNew(3, nil),
 	}
 
-	args, placeholders := ulid.ULIDPlaceholders(ids)
-
-	if len(args) != 3 {
-		t.Errorf("ULIDPlaceholders() returned %d args, want 3", len(args))
+	tests := []struct {
+		name   string
+		dbType string
+		want   string
+	}{
+		{"mysql", "mysql", "?,?,?"},
+		{"postgres", "postgres", "$1,$2,$3"},
+		{"sqlite", "sqlite", "?,?,?"},
+		{"default", "other", "?,?,?"},
 	}
-	for i, arg := range args {
-		if arg != ids[i] {
-			t.Errorf("ULIDPlaceholders() arg %d = %v, want %v", i, arg, ids[i])
-		}
-	}
 
-	expectedPlaceholders := "?,?,?"
-	if placeholders != expectedPlaceholders {
-		t.Errorf("ULIDPlaceholders() placeholders = %q, want %q", placeholders, expectedPlaceholders)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ulid.SetDBType(tt.dbType)
+			args, placeholders := ulid.ULIDPlaceholders(ids)
+
+			if len(args) != 3 {
+				t.Errorf("ULIDPlaceholders() returned %d args, want 3", len(args))
+			}
+
+			if placeholders != tt.want {
+				t.Errorf("ULIDPlaceholders() placeholders = %q, want %q", placeholders, tt.want)
+			}
+		})
 	}
 }
 

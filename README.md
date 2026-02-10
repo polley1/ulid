@@ -130,7 +130,7 @@ When using GORM, `ulid.NullableULID` automatically maps to the correct data type
 
 - `ScanULID(interface{}) (ULID, error)`: Helper to scan a value into a ULID.
 - `ValueULID(ULID) (driver.Value, error)`: Helper to get the driver value (bytes) for a ULID.
-- `ULIDPlaceholders([]ULID) ([]interface{}, string)`: Generates query placeholders for a slice of ULIDs.
+- `ULIDPlaceholders(id_list []ULID) ([]interface{}, string)`: Generates query placeholders for a slice of ULIDs. Defaults to `?`. Use `SetDBType("postgres")` to Use `$n` placeholders.
 
 If you don't care about time-based ordering of generated IDs, then there's no
 reason to use ULIDs! There are many other kinds of IDs that are easier, faster,
