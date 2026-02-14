@@ -508,7 +508,7 @@ func (id ULID) Compare(other ULID) int {
 // Scan implements the sql.Scanner interface. It supports scanning
 // a string or byte slice.
 // Updated to handle postgress UUID format by removing hyphens if present.
-func (id *ULID) Scan(src interface{}) error {
+func (id *ULID) Scan(src any) error {
 	if src == nil {
 		return nil
 	}
@@ -558,7 +558,7 @@ type NullableULID struct {
 }
 
 // Scan implements the sql.Scanner interface.
-func (nu *NullableULID) Scan(value interface{}) error {
+func (nu *NullableULID) Scan(value any) error {
 	if value == nil {
 		nu.ULID = ULID{}
 		nu.Valid = false
@@ -634,7 +634,7 @@ func (id *ULID) ULIDToUUIDString() string {
 
 // ScanULID scans the given value into a ULID.
 // It handles nil, string (both parsed and raw), and []byte.
-func ScanULID(value interface{}) (ULID, error) {
+func ScanULID(value any) (ULID, error) {
 	if value == nil {
 		return ULID{}, nil
 	}
@@ -679,8 +679,8 @@ func SetDBType(dbType string) {
 // ULIDPlaceholders converts a slice of ULIDs into a slice of interface{} and returns a
 // comma-separated string of placeholders suitable for SQL queries.
 // The placeholders are generated based on the db_type global variable (set via SetDBType).
-func ULIDPlaceholders(id_list []ULID) ([]interface{}, string) {
-	args := make([]interface{}, len(id_list))
+func ULIDPlaceholders(id_list []ULID) ([]any, string) {
+	args := make([]any, len(id_list))
 	placeholders := make([]string, len(id_list))
 	for i := range id_list {
 		switch db_type {

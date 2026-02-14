@@ -26,7 +26,7 @@ func TestNullableULID_Scan(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		input   interface{}
+		input   any
 		want    ulid.NullableULID
 		wantErr bool
 	}{
@@ -159,7 +159,7 @@ func TestScanULID(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		input   interface{}
+		input   any
 		want    ulid.ULID
 		wantErr bool
 	}{

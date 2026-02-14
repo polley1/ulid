@@ -215,7 +215,7 @@ func TestParseStrictInvalidCharacters(t *testing.T) {
 	}
 	testCases := []testCase{}
 	base := "0000XSNJG0MQJHBF4QX1EFD6Y3"
-	for i := 0; i < ulid.EncodedSize; i++ {
+	for i := range ulid.EncodedSize {
 		testCases = append(testCases, testCase{
 			name:  fmt.Sprintf("Invalid 0xFF at index %d", i),
 			input: base[:i] + "\xff" + base[i+1:],
@@ -282,7 +282,7 @@ func TestLexicographicalOrder(t *testing.T) {
 	}
 
 	top := ulid.MustNew(ulid.MaxTime(), nil)
-	for i := 0; i < 10; i++ { // test upper boundary state space
+	for range 10 { // test upper boundary state space
 		next := ulid.MustNew(top.Time()-1, nil)
 		if !prop(top, next) {
 			t.Fatalf("bad lexicographical order: (%v, %q) > (%v, %q) == false",
@@ -419,7 +419,7 @@ func TestULIDTime(t *testing.T) {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 1e6; i++ {
+	for range int(1e6) {
 		ms := uint64(rng.Int63n(int64(maxTime)))
 
 		var id ulid.ULID
@@ -560,7 +560,7 @@ func TestScan(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		in   interface{}
+		in   any
 		out  ulid.ULID
 		err  error
 	}{
@@ -569,7 +569,6 @@ func TestScan(t *testing.T) {
 		{"nil", nil, ulid.ULID{}, nil},
 		{"other", 44, ulid.ULID{}, ulid.ErrScanValue},
 	} {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -603,14 +602,13 @@ func TestMonotonic(t *testing.T) {
 			math.MaxUint16 + 1,
 			math.MaxUint32 + 1,
 		} {
-			inc := inc
 			entropy := ulid.Monotonic(e.mk(), uint64(inc))
 
 			t.Run(fmt.Sprintf("entropy=%s/inc=%d", e.name, inc), func(t *testing.T) {
 				t.Parallel()
 
 				var prev ulid.ULID
-				for i := 0; i < 10000; i++ {
+				for range 10000 {
 					next, err := ulid.New(123, entropy)
 					if err != nil {
 						t.Fatal(err)
@@ -665,7 +663,7 @@ func TestMonotonicSafe(t *testing.T) {
 		go func() {
 			u0 := ulid.MustNew(t0, safe)
 			u1 := u0
-			for j := 0; j < 1024; j++ {
+			for range 1024 {
 				u0, u1 = u1, ulid.MustNew(t0, safe)
 				if u0.String() >= u1.String() {
 					errs <- fmt.Errorf(
@@ -731,7 +729,6 @@ func benchmarkMakeULID(b *testing.B, f func(uint64, io.Reader)) {
 		{"WithCryptoMonotonicEntropy_DifferentTimestamp_Inc1", []uint64{122, 123}, ulid.Monotonic(crand.Reader, 1)},
 		{"WithoutEntropy", []uint64{123}, nil},
 	} {
-		tc := tc
 		b.Run(tc.name, func(b *testing.B) {
 			b.StopTimer()
 			b.ResetTimer()
