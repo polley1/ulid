@@ -624,6 +624,14 @@ func (NullableULID) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	}
 }
 
+// ULIDToUUIDString converts the ULID to a UUID string format (8-4-4-4-12) for
+// compatibility with databases that expect UUIDs, such as PostgreSQL.
+// This is useful for debugging when you want to query the database directly using
+// the UUID string representation of the ULID.
+func (id *ULID) ULIDToUUIDString() string {
+	return fmt.Sprintf("%x-%x-%x-%x-%x", id[0:4], id[4:6], id[6:8], id[8:10], id[10:16])
+}
+
 // ScanULID scans the given value into a ULID.
 // It handles nil, string (both parsed and raw), and []byte.
 func ScanULID(value interface{}) (ULID, error) {
