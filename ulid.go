@@ -686,10 +686,14 @@ func ULIDPlaceholders(id_list []ULID) ([]any, string) {
 		switch db_type {
 		case "postgres":
 			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			// Postgres/Cockroach UUID columns reliably accept UUID text values.
+			// Passing raw 16-byte values can surface invalid UTF-8 errors (SQLSTATE 22021)
+			// when placeholders are bound in text contexts.
+			args[i] = id_list[i].ULIDToUUIDString()
 		default:
 			placeholders[i] = "?"
+			args[i] = id_list[i]
 		}
-		args[i] = id_list[i]
 	}
 	return args, fmt.Sprintf("%s", strings.Join(placeholders, ","))
 }
